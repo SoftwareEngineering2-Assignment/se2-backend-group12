@@ -3,8 +3,11 @@ name: ci
 on: push
 
 env:
-  SERVER_SECRET: ${{ secrets.SERVER_SECRET }}
-  MONGODB_URI: ${{ secrets.MONGODB_URI }}
+  SERVER_SECRET: ${{ secrets.SERVER_SECRET }} 
+  SERVER_URI: ${{ secrets.SERVER_URI }} 
+  SERVER_EMAIL: ${{ secrets.SERVER_EMAIL }} 
+  PLATFORM_URI: ${{ secrets.PLATFORM_URI }} 
+  MONGODB_URI: ${{ secrets.MONGODB_URI }} 
 
 jobs:
   ci:
@@ -32,5 +35,4 @@ jobs:
             git reset --hard origin/main
             git pull https://${{ secrets.CLONE_TOKEN }}@github.com/SkiadasGiorgos/se2-example-backend main
             bash ci 'npm install'
-            bash ci 'pm2 restart example-backend-12'
-  
+            bash ci 'pm2 restart example-backend-12 --update-env'
