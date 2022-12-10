@@ -31,8 +31,8 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
           script: |
+            git pull https://${{ secrets.CLONE_TOKEN }}@github.com/SkiadasGiorgos/se2-example-backend main
             cd  ~/se2/12/se2-example-backend
             git reset --hard origin/main
-            git pull https://${{ secrets.CLONE_TOKEN }}@github.com/SkiadasGiorgos/se2-example-backend main
             bash ci 'npm install'
             bash ci 'pm2 restart example-backend-12 --update-env'
