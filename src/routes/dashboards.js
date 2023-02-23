@@ -16,7 +16,15 @@ const Dashboard = require('../models/dashboard');
 const Source = require('../models/source');
 
 /**
- * Endpoint to retrieve all dashboards belonging to the authenticated user.
+ * Endpoint to retrieve all dashboards belonging to the authenticated user. This route handles a
+ * GET request to retrieve all dashboards belonging to the authenticated user.
+ * Authorization middleware is used to check if the user is authorized to access the endpoint.
+ * An async function is used to handle the request and response objects.
+ * The ID of the authenticated user is obtained from the JWT token.
+ * The find() method is used to retrieve all dashboards belonging to the authenticated user using their ID.
+ * The forEach() method is used to loop through each found dashboard and format the data to only
+ * include the ID, name, and views count. The formatted dashboard data is returned in a JSON response
+ * with a success boolean. Any errors caught are passed to the error-handling middleware.
  *
  * @name GET /dashboards
  * @function
@@ -30,7 +38,6 @@ const Source = require('../models/source');
  * @example
  * GET /dashboards
  */
-
 router.get('/dashboards',
   // Middleware function to check if the user is authorized to access the endpoint
   authorization,
@@ -62,25 +69,19 @@ router.get('/dashboards',
       return next(err.body);
     }
   });
-/**
- * This route handles a GET request to retrieve all dashboards belonging to the authenticated user.
- * Authorization middleware is used to check if the user is authorized to access the endpoint.
- * An async function is used to handle the request and response objects.
- * The ID of the authenticated user is obtained from the JWT token.
- * The find() method is used to retrieve all dashboards belonging to the authenticated user using their ID.
- * The forEach() method is used to loop through each found dashboard and format the data to only include the ID, name, and views count.
- * The formatted dashboard data is returned in a JSON response with a success boolean.
- * Any errors caught are passed to the error-handling middleware.
- */
 
 /**
- * Endpoint to create a dashboard
+ * Endpoint to create a dashboard. The route creates a new dashboard for the user.
+ * It requires the user to be authenticated, so it checks the authorization first.
+ * It then checks if a dashboard with the same name already exists.
+ * If the dashboard does not exist, it creates a new dashboard with an empty layout, no items,
+ * a next id of 1, and the owner id. Finally, it sends a success response to the user.
  *
- @route POST /create-dashboard
- @description Creates a new dashboard for the user
- @access Private
- @param {string} name - The name of the dashboard to create
- @returns {JSON} Returns a success status if the dashboard is created successfully, otherwise returns an error message.
+ * @route POST /create-dashboard
+ * @description Creates a new dashboard for the user
+ * @access Private
+ * @param {string} name - The name of the dashboard to create
+ * @returns {JSON} Returns a success status if the dashboard is created successfully, otherwise returns an error message.
  */
 router.post('/create-dashboard',
   authorization,
@@ -111,17 +112,16 @@ router.post('/create-dashboard',
       return next(err.body);
     }
   });
-/**
- * The route creates a new dashboard for the user.
- * It requires the user to be authenticated, so it checks the authorization first.
- * It then checks if a dashboard with the same name already exists.
- * If the dashboard does not exist, it creates a new dashboard with an empty layout, no items,
- * a next id of 1, and the owner id.
- * Finally, it sends a success response to the user.
- */
 
 /**
- * Endpoint to delete a dashboard.
+ * Endpoint to delete a dashboard. This code defines a route for deleting a dashboard.
+ * The route requires the user to be authorized before executing the async function.
+ * The function extracts the ID of the dashboard to be deleted from the request body,
+ * finds and deletes the dashboard with the specified ID and owned by the authenticated user.
+ * If the dashboard was not found, it returns an error response.
+ * If the dashboard was successfully deleted, it returns a success response.
+ * Any errors caught during the process are passed to the error-handling middleware.
+ * 
  * @route POST /delete-dashboard
  * @param {Object} req - The request object
  * @param {Object} req.body - The request body containing the ID of the dashboard to be deleted
@@ -158,26 +158,23 @@ router.post('/delete-dashboard',
       return next(err.body);
     }
   });
-/**
- * This code defines a route for deleting a dashboard.
- * The route requires the user to be authorized before executing the async function.
- * The function extracts the ID of the dashboard to be deleted from the request body,
- * finds and deletes the dashboard with the specified ID and owned by the authenticated user.
- * If the dashboard was not found, it returns an error response.
- * If the dashboard was successfully deleted, it returns a success response.
- * Any errors caught during the process are passed to the error-handling middleware.
- */
 
 router.get('/dashboard',
+  // Middleware function to check if the user is authorized to access the endpoint
   authorization,
+  // Async function to handle the request and response objects
   async (req, res, next) => {
     try {
+      // Extract the ID of the dashboard to be retrieved from the request query parameters
       const {id} = req.query;
 
+      // Find the dashboard with the specified ID and owned by the authenticated user
       const foundDashboard = await Dashboard.findOne({
         _id: mongoose.Types.ObjectId(id),
         owner: mongoose.Types.ObjectId(req.decoded.id)
       });
+
+      // If no dashboard was found matching the specified ID and owner, return an error response
       if (!foundDashboard) {
         return res.json({
           status: 409,
@@ -185,25 +182,27 @@ router.get('/dashboard',
         });
       }
 
-      const dashboard = {};
-      dashboard.id = foundDashboard._id;
-      dashboard.name = foundDashboard.name;
-      dashboard.layout = foundDashboard.layout;
-      dashboard.items = foundDashboard.items;
-      dashboard.nextId = foundDashboard.nextId;
+      // Format the retrieved dashboard data to include only the ID, name, layout, items, and nextId
+      const dashboard = {
+        id: foundDashboard._id,
+        name: foundDashboard.name,
+        layout: foundDashboard.layout,
+        items: foundDashboard.items,
+        nextId: foundDashboard.nextId
+      };
 
+      // Find all sources belonging to the authenticated user and format the data to only include the name
       const foundSources = await Source.find({owner: mongoose.Types.ObjectId(req.decoded.id)});
-      const sources = [];
-      foundSources.forEach((s) => {
-        sources.push(s.name);
-      });
+      const sources = foundSources.map((s) => s.name);
 
+      // Return the formatted dashboard and sources data in a JSON response
       return res.json({
         success: true,
         dashboard,
         sources
       });
     } catch (err) {
+      // Pass any caught errors to the error-handling middleware
       return next(err.body);
     }
   });
