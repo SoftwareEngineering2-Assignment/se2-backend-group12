@@ -1,3 +1,8 @@
+/**
+
+ @description This module exports a Mongoose model for SourceSchema.
+ @module models/source
+ */
 /* eslint-disable func-names */
 const mongoose = require('mongoose');
 const beautifyUnique = require('mongoose-beautiful-unique-validation');
@@ -28,7 +33,7 @@ const SourceSchema = new mongoose.Schema(
 
 SourceSchema.plugin(beautifyUnique);
 
-// Pre save hook that hashes passwords
+// Pre save hook that sets the createdAt field to the current date
 
 SourceSchema.pre('save', function (next) {
   if (this.isModified('name')) {
