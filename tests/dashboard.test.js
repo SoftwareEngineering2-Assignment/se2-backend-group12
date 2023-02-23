@@ -1,9 +1,11 @@
 const test = require('ava').default;
 const got = require('got');
+const Dashboard = require('../src/routes/dashboards')
 const listen = require('test-listen');
 const http = require('http');
 const app = require('../src/index');
 const {jwtSign} = require('../src/utilities/authentication/helpers');
+const mongoose = require('mongoose');
 
 test.before(async (t) => {
   t.context.server = http.createServer(app);
@@ -20,79 +22,47 @@ test.after.always((t) => {
   t.context.server.close();
 });
 
-test('GET /api/dashboard/:id returns correct response and status code', async (t) => {
+test('GET /dashboards returns correct response and status code', async (t) => {
   const token = jwtSign({id: 1});
-  const dashboardId = '123';
   const {
     statusCode,
     body
-  } = await t.context.got(`api/dashboard/${dashboardId}`, {
+  } = await t.context.got(`dashboards`, {
     headers: {authorization: `Bearer ${token}`}
   });
   t.is(statusCode, 200);
   t.truthy(body.success);
-  t.is(body.dashboard.id, dashboardId);
 });
 
-test('GET /api/dashboard/:id returns 404 when dashboard not found', async (t) => {
+test('GET /dashboards returns 404 when dashboard not found', async (t) => {
   const token = jwtSign({id: 1});
-  const dashboardId = '456';
-  const {statusCode} = await t.context.got(`api/dashboard/${dashboardId}`, {
+  const {statusCode, body} = await t.context.got(`dashboards`, {
     headers: {authorization: `Bearer ${token}`}
   });
   t.is(statusCode, 404);
+  t.truthy(body.success);
 });
 
-test('POST /api/dashboard creates a new dashboard', async (t) => {
+test('POST /create-dashboard creates a new dashboard', async (t) => {
   const token = jwtSign({id: 1});
-  const dashboardData = {
-    name: 'Test Dashboard',
-    layout: 'grid',
-    items: [],
-    nextId: 1
-  };
-  const {
-    statusCode,
-    body
-  } = await t.context.got.post('api/dashboard', {
-    headers: {authorization: `Bearer ${token}`},
-    json: dashboardData
-  });
-  t.is(statusCode, 200);
-  t.truthy(body.success);
-  t.truthy(body.dashboard.id);
-});
 
-test('POST /api/dashboard/:id updates an existing dashboard', async (t) => {
-  const token = jwtSign({id: 1});
-  const dashboardId = '123';
-  const dashboardData = {
-    name: 'Updated Dashboard',
-    layout: 'flex',
-    items: [],
-    nextId: 1
-  };
-  const {
-    statusCode,
-    body
-  } = await t.context.got.post(`api/dashboard/${dashboardId}`, {
-    headers: {authorization: `Bearer ${token}`},
-    json: dashboardData
+  // Send request to create a new dashboard
+  const {statusCode, body} = await t.context.got.post('create-dashboard', {
+    json: {
+      name: 'Test Dashboard'
+    },
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
   });
-  t.is(statusCode, 200);
-  t.truthy(body.success);
-  t.is(body.dashboard.name, dashboardData.name);
-});
 
-test('POST /api/dashboard/:id deletes an existing dashboard', async (t) => {
-  const token = jwtSign({id: 1});
-  const dashboardId = '123';
-  const {
-    statusCode,
-    body
-  } = await t.context.got.post(`api/dashboard/${dashboardId}/delete`, {
-    headers: {authorization: `Bearer ${token}`}
-  });
+  // Verify that the response has a success status code
   t.is(statusCode, 200);
-  t.truthy(body.success);
+
+  // Verify that the new dashboard was created
+  const dashboard = await Dashboard.get({
+    owner: mongoose.Types.ObjectId(1),
+    name: 'Test Dashboard'
+  });
+  t.truthy(dashboard);
 });

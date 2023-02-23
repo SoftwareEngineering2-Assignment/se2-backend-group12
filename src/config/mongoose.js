@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+require('dotenv').config({ path: '.env.sample' });
 // Set up options for Mongoose
 const mongooseOptions = {
   useNewUrlParser: true,

@@ -5,6 +5,7 @@ module.exports = {
       script: 'npm',
       args: 'start',
       env: {"PORT": 3012},
+      node_args: "-r .env.sample",
     },
   ],
 };

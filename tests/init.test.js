@@ -21,7 +21,7 @@ test.after.always((t) => {
   t.context.server.close();
 });
 
-test('GET /api/sources returns correct response and status code', async (t) => {
+test('GET /sources returns correct response and status code', async (t) => {
   // Generate a JWT token with user ID 1
   const token = jwtSign({ id: 1 });
 
