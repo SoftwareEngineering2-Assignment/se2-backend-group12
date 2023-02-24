@@ -8,37 +8,90 @@ const User = require('../models/user');
 const Dashboard = require('../models/dashboard');
 const Source = require('../models/source');
 
-router.get('/statistics',
-  async (req, res, next) => {
-    try {
-      const users = await User.countDocuments();
-      const dashboards = await Dashboard.countDocuments();
-      const views = await Dashboard.aggregate([
-        {
-          $group: {
-            _id: null, 
-            views: {$sum: '$views'}
-          }
-        }
-      ]);
-      const sources = await Source.countDocuments();
+/**
+ * Counts the number of users in the database.
+ *
+ * @returns {Number} - The number of users.
+ */
+async function countUsers() {
+  return User.countDocuments();
+}
 
-      let totalViews = 0;
-      if (views[0] && views[0].views) {
-        totalViews = views[0].views;
+/**
+ * Counts the number of dashboards in the database.
+ *
+ * @returns {Number} - The number of dashboards.
+ */
+async function countDashboards() {
+  return Dashboard.countDocuments();
+}
+
+/**
+ * Sums the total number of views across all dashboards in the database.
+ *
+ * @returns {Number} - The total number of views.
+ */
+async function sumDashboardViews() {
+  const result = await Dashboard.aggregate([
+    {
+      $group: {
+        _id: null,
+        views: {$sum: '$views'}
       }
-
-      return res.json({
-        success: true,
-        users,
-        dashboards,
-        views: totalViews,
-        sources
-      });
-    } catch (err) {
-      return next(err.body);
     }
-  });
+  ]);
+
+  return result[0] && result[0].views ? result[0].views : 0;
+}
+
+/**
+ * Counts the number of sources in the database.
+ *
+ * @returns {Number} - The number of sources.
+ */
+async function countSources() {
+  return Source.countDocuments();
+}
+
+
+/**
+ * Retrieves statistics on the number of users, dashboards, views, and sources.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next middleware function.
+ * @returns {Object} - The statistics response object.
+ */
+async function getStatistics(req, res, next) {
+  try {
+    const users = countUsers();
+    const dashboards = countDashboards();
+    const views = sumDashboardViews();
+    const sources = countSources();
+
+    return res.json({
+      success: true,
+      users,
+      dashboards,
+      views,
+      sources
+    });
+  } catch (err) {
+    return next(err.body);
+  }
+}
+
+router.get('/statistics', getStatistics);
+
+/**
+ * Checks the status code of the specified URL.
+ * @param {string} url - The URL to check.
+ * @returns {Promise<number>} The status code of the URL.
+ */
+async function checkUrlStatusCode(url) {
+  const {statusCode} = await got(url);
+  return statusCode;
+}
 
 router.get('/test-url',
   async (req, res) => {
@@ -87,7 +140,7 @@ router.get('/test-url-request',
           statusCode = 500;
           body = 'Something went wrong';
       }
-      
+
       return res.json({
         status: statusCode,
         response: body,
@@ -99,5 +152,7 @@ router.get('/test-url-request',
       });
     }
   });
+
+module.exports = router;
 
 module.exports = router;
