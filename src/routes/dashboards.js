@@ -121,7 +121,7 @@ router.post('/create-dashboard',
  * If the dashboard was not found, it returns an error response.
  * If the dashboard was successfully deleted, it returns a success response.
  * Any errors caught during the process are passed to the error-handling middleware.
- * 
+ *
  * @route POST /delete-dashboard
  * @param {Object} req - The request object
  * @param {Object} req.body - The request body containing the ID of the dashboard to be deleted
@@ -159,8 +159,17 @@ router.post('/delete-dashboard',
     }
   });
 
+/**
+ Retrieves the specified dashboard and associated sources for the authenticated user.
+
+ @param {Object} req - The HTTP request object.
+ @param {Object} res - The HTTP response object.
+ @param {function} next - The next middleware function to call.
+ @returns {Object} A JSON response with the formatted dashboard and sources data.
+ @throws {Object} An error response if the specified dashboard is not found.
+ */
 router.get('/dashboard',
-  // Middleware function to check if the user is authorized to access the endpoint
+// Middleware function to check if the user is authorized to access the endpoint
   authorization,
   // Async function to handle the request and response objects
   async (req, res, next) => {
@@ -207,90 +216,138 @@ router.get('/dashboard',
     }
   });
 
-router.post('/save-dashboard',
-  authorization,
-  async (req, res, next) => {
-    try {
-      const {
-        id,
+/**
+ * Saves a dashboard layout and items for an authenticated user.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {function} next - The next function in the middleware chain.
+ * @return {Object} - The JSON response containing the success status.
+ * @throws {Object} - The error object to be handled by the error-handling middleware.
+ */
+router.post('/save-dashboard', authorization, async (req, res, next) => {
+  try {
+    // Extract the ID, layout, items, and nextId from the request body
+    const {
+      id,
+      layout,
+      items,
+      nextId
+    } = req.body;
+
+    // Find the dashboard with the specified ID and owned by the authenticated user,
+    // and update its layout, items, and nextId
+    const result = await Dashboard.findOneAndUpdate({
+      _id: mongoose.Types.ObjectId(id),
+      owner: mongoose.Types.ObjectId(req.decoded.id)
+    }, {
+      $set: {
         layout,
         items,
         nextId
-      } = req.body;
-
-      const result = await Dashboard.findOneAndUpdate({
-        _id: mongoose.Types.ObjectId(id),
-        owner: mongoose.Types.ObjectId(req.decoded.id)
-      }, {
-        $set: {
-          layout,
-          items,
-          nextId
-        }
-      }, {new: true});
-
-      if (result === null) {
-        return res.json({
-          status: 409,
-          message: 'The selected dashboard has not been found.'
-        });
       }
-      return res.json({success: true});
-    } catch (err) {
-      return next(err.body);
-    }
-  });
+    }, {new: true});
 
-router.post('/clone-dashboard',
+    // If no dashboard was found matching the specified ID and owner, return an error response
+    if (result === null) {
+      return res.json({
+        status: 409,
+        message: 'The selected dashboard has not been found.'
+      });
+    }
+
+    // Return a success JSON response
+    return res.json({success: true});
+  } catch (err) {
+    // Pass any caught errors to the error-handling middleware
+    return next(err.body);
+  }
+});
+
+/**
+ * Clone a dashboard with a new name.
+ *
+ * @param {Object} req - The HTTP request object.
+ * @param {Object} req.body - The request body.
+ * @param {string} req.body.dashboardId - The ID of the dashboard to clone.
+ * @param {string} req.body.name - The new name for the cloned dashboard.
+ * @param {Object} res - The HTTP response object.
+ * @param {Object} next - The next middleware function.
+ * @returns {Object} The HTTP response.
+ */
+router.post('/clone-dashboard', authorization, async (req, res, next) => {
+  try {
+    // Extract dashboard ID and new name from request body
+    const {
+      dashboardId,
+      name
+    } = req.body;
+
+    // Check if a dashboard with the new name already exists for the authenticated user
+    const foundDashboard = await Dashboard.findOne({
+      owner: mongoose.Types.ObjectId(req.decoded.id),
+      name,
+    });
+    if (foundDashboard) {
+      return res.json({
+        status: 409,
+        message: 'A dashboard with that name already exists.',
+      });
+    }
+
+    // Find the dashboard to clone and ensure it is owned by the authenticated user
+    const oldDashboard = await Dashboard.findOne({
+      _id: mongoose.Types.ObjectId(dashboardId),
+      owner: mongoose.Types.ObjectId(req.decoded.id),
+    });
+
+    // Create a new dashboard with the specified name and properties of the cloned dashboard
+    await new Dashboard({
+      name,
+      layout: oldDashboard.layout,
+      items: oldDashboard.items,
+      nextId: oldDashboard.nextId,
+      owner: mongoose.Types.ObjectId(req.decoded.id),
+    }).save();
+
+    // Return a success response
+    return res.json({success: true});
+  } catch (err) {
+    // Pass any caught errors to the error-handling middleware
+    return next(err.body);
+  }
+});
+
+/**
+ * Toggles the shared status of a dashboard with the specified ID.
+ *
+ * @param {Request} req - The request object.
+ * @param {string} req.body.dashboardId - The ID of the dashboard to be shared.
+ * @param {Object} req.decoded - The decoded user object obtained from the authorization header.
+ * @param {string} req.decoded.id - The ID of the authenticated user.
+ * @param {Response} res - The response object.
+ * @param {Function} next - The next middleware function.
+ * @returns {Response} The response object with a JSON body.
+ */
+router.post('/share-dashboard',
+  // Middleware function to check if the user is authorized to access the endpoint
   authorization,
+  // Async function to handle the request and response objects
   async (req, res, next) => {
     try {
-      const {
-        dashboardId,
-        name
-      } = req.body;
+      // Extract the ID of the dashboard to be shared from the request body
+      const {dashboardId} = req.body;
 
+      // Extract the ID of the authenticated user from the decoded token
+      const {id} = req.decoded;
+
+      // Find the dashboard with the specified ID and owned by the authenticated user
       const foundDashboard = await Dashboard.findOne({
-        owner: mongoose.Types.ObjectId(req.decoded.id),
-        name
-      });
-      if (foundDashboard) {
-        return res.json({
-          status: 409,
-          message: 'A dashboard with that name already exists.'
-        });
-      }
-
-      const oldDashboard = await Dashboard.findOne({
         _id: mongoose.Types.ObjectId(dashboardId),
-        owner: mongoose.Types.ObjectId(req.decoded.id)
+        owner: mongoose.Types.ObjectId(id)
       });
 
-      await new Dashboard({
-        name,
-        layout: oldDashboard.layout,
-        items: oldDashboard.items,
-        nextId: oldDashboard.nextId,
-        owner: mongoose.Types.ObjectId(req.decoded.id)
-      }).save();
-
-      return res.json({success: true});
-    } catch (err) {
-      return next(err.body);
-    }
-  });
-
-router.post('/check-password-needed',
-  async (req, res, next) => {
-    try {
-      const {
-        user,
-        dashboardId
-      } = req.body;
-      const userId = user.id;
-
-      const foundDashboard = await Dashboard.findOne({_id: mongoose.Types.ObjectId(dashboardId)})
-        .select('+password');
+      // If no dashboard was found matching the specified ID and owner, return an error response
       if (!foundDashboard) {
         return res.json({
           status: 409,
@@ -298,53 +355,118 @@ router.post('/check-password-needed',
         });
       }
 
-      const dashboard = {};
-      dashboard.name = foundDashboard.name;
-      dashboard.layout = foundDashboard.layout;
-      dashboard.items = foundDashboard.items;
+      // Toggle the shared property of the found dashboard
+      foundDashboard.shared = !(foundDashboard.shared);
 
-      if (userId && foundDashboard.owner.equals(userId)) {
-        foundDashboard.views += 1;
-        await foundDashboard.save();
+      // Save the updated dashboard to the database
+      await foundDashboard.save();
 
-        return res.json({
-          success: true,
-          owner: 'self',
-          shared: foundDashboard.shared,
-          hasPassword: foundDashboard.password !== null,
-          dashboard
-        });
-      }
-      if (!(foundDashboard.shared)) {
-        return res.json({
-          success: true,
-          owner: '',
-          shared: false
-        });
-      }
-      if (foundDashboard.password === null) {
-        foundDashboard.views += 1;
-        await foundDashboard.save();
-
-        return res.json({
-          success: true,
-          owner: foundDashboard.owner,
-          shared: true,
-          passwordNeeded: false,
-          dashboard
-        });
-      }
+      // Return a JSON response indicating success and the updated shared property value
       return res.json({
         success: true,
-        owner: '',
-        shared: true,
-        passwordNeeded: true
+        shared: foundDashboard.shared
       });
     } catch (err) {
+      // Pass any caught errors to the error-handling middleware
       return next(err.body);
     }
   });
 
+/**
+ * Endpoint to check if a password is needed to access a dashboard
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} - JSON response containing whether a password is needed
+ */
+router.post('/check-password-needed', async (req, res, next) => {
+  try {
+    const {
+      user,
+      dashboardId
+    } = req.body;
+    const userId = user.id;
+
+    // Look up the dashboard by ID and select the 'password' field
+    const foundDashboard = await Dashboard.findById(dashboardId)
+      .select('+password');
+
+    if (!foundDashboard) {
+      return res.json({
+        status: 409,
+        message: 'The specified dashboard has not been found.'
+      });
+    }
+
+    // Construct a simplified dashboard object
+    const dashboard = {
+      name: foundDashboard.name,
+      layout: foundDashboard.layout,
+      items: foundDashboard.items
+    };
+
+    if (userId && foundDashboard.owner.equals(userId)) {
+      // If the requesting user is the owner of the dashboard, increment the 'views' count and return the dashboard
+      foundDashboard.views += 1;
+      await foundDashboard.save();
+
+      return res.json({
+        success: true,
+        owner: 'self',
+        shared: foundDashboard.shared,
+        hasPassword: !!foundDashboard.password,
+        dashboard
+      });
+    }
+
+    if (!foundDashboard.shared) {
+      // If the dashboard is not shared, indicate that no further action is needed
+      return res.json({
+        success: true,
+        owner: '',
+        shared: false
+      });
+    }
+
+    if (!foundDashboard.password) {
+      // If the dashboard is shared and does not have a password, increment the 'views' count and return the dashboard
+      foundDashboard.views += 1;
+      await foundDashboard.save();
+
+      return res.json({
+        success: true,
+        owner: foundDashboard.owner,
+        shared: true,
+        passwordNeeded: false,
+        dashboard
+      });
+    }
+
+    // If the dashboard is shared and has a password, indicate that the password is needed
+    return res.json({
+      success: true,
+      owner: '',
+      shared: true,
+      passwordNeeded: true
+    });
+  } catch (err) {
+    return next(err.body);
+  }
+});
+
+/**
+ * Check the password for a specified dashboard.
+ *
+ * @param {Object} req - The HTTP request object.
+ * @param {Object} req.body - The request body containing the dashboard ID and password.
+ * @param {string} req.body.dashboardId - The ID of the dashboard to check the password for.
+ * @param {string} req.body.password - The password to check against the dashboard's stored password.
+ * @param {Object} res - The HTTP response object.
+ * @param {Function} next - The next middleware function in the chain.
+ * @returns {Object} - The JSON response containing the success status, whether the password was correct,
+ * the dashboard owner, and the dashboard object.
+ */
 router.post('/check-password',
   async (req, res, next) => {
     try {
@@ -353,6 +475,7 @@ router.post('/check-password',
         password
       } = req.body;
 
+      // Find the dashboard with the given id and select the password field.
       const foundDashboard = await Dashboard.findOne({_id: mongoose.Types.ObjectId(dashboardId)})
         .select('+password');
       if (!foundDashboard) {
@@ -361,6 +484,8 @@ router.post('/check-password',
           message: 'The specified dashboard has not been found.'
         });
       }
+
+      // If the password is incorrect, return a response with correctPassword = false.
       if (!foundDashboard.comparePassword(password, foundDashboard.password)) {
         return res.json({
           success: true,
@@ -368,6 +493,7 @@ router.post('/check-password',
         });
       }
 
+      // If the password is correct, increment the views count for the dashboard and return its details.
       foundDashboard.views += 1;
       await foundDashboard.save();
 
@@ -387,63 +513,58 @@ router.post('/check-password',
     }
   });
 
-router.post('/share-dashboard',
-  authorization,
-  async (req, res, next) => {
-    try {
-      const {dashboardId} = req.body;
-      const {id} = req.decoded;
 
-      const foundDashboard = await Dashboard.findOne({
-        _id: mongoose.Types.ObjectId(dashboardId),
-        owner: mongoose.Types.ObjectId(id)
-      });
-      if (!foundDashboard) {
-        return res.json({
-          status: 409,
-          message: 'The specified dashboard has not been found.'
-        });
-      }
-      foundDashboard.shared = !(foundDashboard.shared);
-
-      await foundDashboard.save();
-
-      return res.json({
-        success: true,
-        shared: foundDashboard.shared
-      });
-    } catch (err) {
-      return next(err.body);
-    }
-  });
+/**
+ * Changes the password of a dashboard owned by the authenticated user.
+ *
+ * @param {Object} req - The HTTP request object.
+ * @param {Object} req.body - The request body.
+ * @param {string} req.body.dashboardId - The ID of the dashboard to update.
+ * @param {string} req.body.password - The new password for the dashboard.
+ * @param {Object} req.decoded - The decoded JWT payload with the authenticated user's ID.
+ * @param {Object} res - The HTTP response object.
+ * @param {function} next - The next middleware function in the request chain.
+ * @returns {Object} A JSON response indicating the operation result.
+ * @throws {Object} An error object containing a `status` and a `message` property
+ *                   if the dashboard is not found or the operation fails.
+ */
 
 router.post('/change-password',
   authorization,
   async (req, res, next) => {
     try {
+      // Get the dashboard ID and new password from the request body
       const {
         dashboardId,
         password
       } = req.body;
+
+      // Get the user ID from the decoded token
       const {id} = req.decoded;
 
+      // Find the dashboard with the specified ID and owned by the user
       const foundDashboard = await Dashboard.findOne({
         _id: mongoose.Types.ObjectId(dashboardId),
         owner: mongoose.Types.ObjectId(id)
       });
-      if (!foundDashboard) {
-        return res.json({
-          status: 409,
-          message: 'The specified dashboard has not been found.'
-        });
-      }
-      foundDashboard.password = password;
 
+      // If the dashboard is not found, return an error response
+      if (!foundDashboard) {
+        return res.status(409)
+          .json({
+            message: 'The specified dashboard has not been found.'
+          });
+      }
+
+      // Set the new password for the dashboard and save it to the database
+      foundDashboard.password = password;
       await foundDashboard.save();
 
+      // Return a success response
       return res.json({success: true});
     } catch (err) {
-      return next(err.body);
+      // If an error occurs, pass it to the error-handling middleware
+      return next(err);
     }
   });
 
