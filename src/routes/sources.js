@@ -65,8 +65,6 @@ async function createSources(req, res, next) {
 }
 
 
-
-
 async function changeSource(req, res, next) {
 try {
   const {id, name, type, url, login, passcode, vhost} = req.body;

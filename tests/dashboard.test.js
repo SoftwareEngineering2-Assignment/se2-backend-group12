@@ -93,5 +93,3 @@ test('POST /save-dashboard returns success and updated dashboard data', async (t
   // Assert that the response body contains a 'success' property with a truthy value
   t.truthy(body.status);
 });
-
-
