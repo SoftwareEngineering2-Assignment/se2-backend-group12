@@ -81,78 +81,91 @@ async function getStatistics(req, res, next) {
   }
 }
 
-router.get('/statistics', getStatistics);
 
 /**
- * Checks the status code of the specified URL.
- * @param {string} url - The URL to check.
- * @returns {Promise<number>} The status code of the URL.
+ * Test URL and return the status code and whether it is active or not.
+ * @param {string} url - The URL to test
+ * @returns {Object} - An object containing the status code and whether it is active or not
  */
-async function checkUrlStatusCode(url) {
-  const {statusCode} = await got(url);
-  return statusCode;
+async function testUrl(url) {
+  try {
+    const {statusCode} = await got(url);
+    return {
+      status: statusCode,
+      active: (statusCode === 200),
+    };
+  } catch (err) {
+    return {
+      status: 500,
+      active: false,
+    };
+  }
 }
 
-router.get('/test-url',
-  async (req, res) => {
-    try {
-      const {url} = req.query;
-      const {statusCode} = await got(url);
-      return res.json({
-        status: statusCode,
-        active: (statusCode === 200),
-      });
-    } catch (err) {
-      return res.json({
-        status: 500,
-        active: false,
-      });
+
+/**
+ * Test URL request and return the response and status code.
+ * @param {string} url - The URL to request
+ * @param {string} type - The request method type (GET, POST, PUT)
+ * @param {string} headers - The headers to be sent with the request
+ * @param {string} requestBody - The body of the request
+ * @param {string} params - The search params to be sent with the request
+ * @returns {Object} - An object containing the status code and response
+ */
+async function testUrlRequest(url, type, headers, requestBody, params) {
+  try {
+    let statusCode;
+    let body;
+    switch (type) {
+      case 'GET':
+        ({statusCode, body} = await got(url, {
+          headers: headers ? JSON.parse(headers) : {},
+          searchParams: params ? JSON.parse(params) : {}
+        }));
+        break;
+      case 'POST':
+        ({statusCode, body} = await got.post(url, {
+          headers: headers ? JSON.parse(headers) : {},
+          json: requestBody ? JSON.parse(requestBody) : {}
+        }));
+        break;
+      case 'PUT':
+        ({statusCode, body} = await got.put(url, {
+          headers: headers ? JSON.parse(headers) : {},
+          json: requestBody ? JSON.parse(requestBody) : {}
+        }));
+        break;
+      default:
+        statusCode = 500;
+        body = 'Something went wrong';
     }
-  });
 
-router.get('/test-url-request',
-  async (req, res) => {
-    try {
-      const {url, type, headers, body: requestBody, params} = req.query;
+    return {
+      status: statusCode,
+      response: body,
+    };
+  } catch (err) {
+    return {
+      status: 500,
+      response: err.toString(),
+    };
+  }
+}
 
-      let statusCode;
-      let body;
-      switch (type) {
-        case 'GET':
-          ({statusCode, body} = await got(url, {
-            headers: headers ? JSON.parse(headers) : {},
-            searchParams: params ? JSON.parse(params) : {}
-          }));
-          break;
-        case 'POST':
-          ({statusCode, body} = await got.post(url, {
-            headers: headers ? JSON.parse(headers) : {},
-            json: requestBody ? JSON.parse(requestBody) : {}
-          }));
-          break;
-        case 'PUT':
-          ({statusCode, body} = await got.put(url, {
-            headers: headers ? JSON.parse(headers) : {},
-            json: requestBody ? JSON.parse(requestBody) : {}
-          }));
-          break;
-        default:
-          statusCode = 500;
-          body = 'Something went wrong';
-      }
 
-      return res.json({
-        status: statusCode,
-        response: body,
-      });
-    } catch (err) {
-      return res.json({
-        status: 500,
-        response: err.toString(),
-      });
-    }
-  });
+router.get('/statistics', getStatistics);
 
-module.exports = router;
+
+router.get('/test-url', async (req, res) => {
+  const {url} = req.query;
+  const result = await testUrl(url);
+  return res.json(result);
+});
+
+router.get('/test-url-request', async (req, res) => {
+  const {url, type, headers, body: requestBody, params} = req.query;
+  const result = await testUrlRequest(url, type, headers, requestBody, params);
+  return res.json(result);
+});
 
 module.exports = router;

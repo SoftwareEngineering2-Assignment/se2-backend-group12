@@ -5,9 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f4638e0a-914b-42fc-b48d-43138c6a9af2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.env.sample" beforeDir="false" afterPath="$PROJECT_DIR$/.env.sample" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/routes/general.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/routes/general.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/dashboard.test.js" beforeDir="false" afterPath="$PROJECT_DIR$/tests/dashboard.test.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/example.test.js" beforeDir="false" afterPath="$PROJECT_DIR$/tests/example.test.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,7 +63,9 @@
       <workItem from="1672224627642" duration="4518000" />
       <workItem from="1677155590675" duration="5496000" />
       <workItem from="1677177317528" duration="6845000" />
-      <workItem from="1677217913776" duration="4355000" />
+      <workItem from="1677217913776" duration="5282000" />
+      <workItem from="1677228108813" duration="108000" />
+      <workItem from="1677228224251" duration="1893000" />
     </task>
     <servers />
   </component>
@@ -78,5 +82,17 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="javascript">
+          <url>file://$PROJECT_DIR$/tests/dashboard.test.js</url>
+          <line>28</line>
+          <properties lambdaOrdinal="-1" />
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>
