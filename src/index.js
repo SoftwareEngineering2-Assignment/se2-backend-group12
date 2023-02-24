@@ -22,6 +22,8 @@ if (process.env.NODE_ENV !== 'test') {
 app.use(bodyParser.json({limit: '50mb'}));
 app.use(bodyParser.urlencoded({limit: '50mb', extended: false}));
 
+// console.log(m)
+
 // Mongo configuration
 mongoose();
 
@@ -35,8 +37,9 @@ app.use(express.static(path.join(__dirname, 'assets')));
 app.use(error);
 
 const port = process.env.PORT || 3000;
+if(process.env.NODE_ENV !== 'test') { 
 app.listen(port, () =>
 // eslint-disable-next-line no-console
   console.log(`NodeJS Server listening on port ${port}. \nMode: ${process.env.NODE_ENV}`));
-
+}
 module.exports = app;
